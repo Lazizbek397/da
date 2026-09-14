@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lazizbek | Student Portfolio</title>
+<style>
+    :root{
+        --navy:#102a43;
+        --blue:#1976d2;
+        --light:#f4f8fc;
+        --text:#243b53;
+        --muted:#627d98;
+        --white:#fff;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;scroll-behavior:smooth}
+    body{font-family:Arial,Helvetica,sans-serif;background:var(--light);color:var(--text);line-height:1.75}
+    nav{
+        position:sticky;top:0;z-index:1000;background:rgba(16,42,67,.96);
+        padding:15px 5%;display:flex;justify-content:space-between;align-items:center
+    }
+    .logo{color:white;font-size:23px;font-weight:800}
+    nav ul{list-style:none;display:flex;gap:22px;flex-wrap:wrap;justify-content:center}
+    nav a{color:#eaf2f8;text-decoration:none;font-size:14px;font-weight:600}
+    nav a:hover{color:#64b5f6}
+    .hero{
+        min-height:650px;display:flex;align-items:center;padding:80px 8%;
+        background:linear-gradient(90deg,rgba(9,30,50,.94),rgba(9,30,50,.62)),
+        url('https://images.unsplash.com/photo-1519452575417-564c1401ecc0?auto=format&fit=crop&w=1800&q=85') center/cover;
+        color:white
+    }
+    .hero-content{max-width:760px}
+    .tag{letter-spacing:3px;text-transform:uppercase;color:#90caf9;font-size:14px;font-weight:bold}
+    h1{font-size:68px;line-height:1.08;margin:15px 0}
+    .hero h1 span{color:#64b5f6}
+    .hero p{font-size:19px;max-width:680px;color:#e3f2fd}
+    .buttons{margin-top:30px;display:flex;gap:14px;flex-wrap:wrap}
+    .btn{display:inline-block;padding:12px 22px;border-radius:30px;text-decoration:none;font-weight:bold}
+    .primary{background:#2196f3;color:white}
+    .secondary{border:1px solid #dbeafe;color:white}
+    section{padding:85px 8%;max-width:1250px;margin:auto}
+    .section-title{text-align:center;margin-bottom:45px}
+    .section-title small{color:var(--blue);font-weight:bold;letter-spacing:2px;text-transform:uppercase}
+    h2{font-size:40px;color:var(--navy);line-height:1.2;margin-top:7px}
+    .intro{max-width:760px;margin:15px auto;color:var(--muted);text-align:center}
+    .about-grid,.edu-grid,.interest-grid,.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:35px;align-items:center}
+    .photo{width:100%;height:390px;object-fit:cover;border-radius:22px;box-shadow:0 15px 35px rgba(16,42,67,.14)}
+    .about-text p{margin-bottom:16px}
+    .facts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:25px}
+    .fact,.card{background:white;border-radius:18px;padding:22px;box-shadow:0 8px 25px rgba(16,42,67,.07)}
+    .fact b{display:block;color:var(--blue);font-size:13px;text-transform:uppercase;letter-spacing:1px}
+    .fact span{font-weight:700}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+    .card h3{color:var(--navy);margin:12px 0 6px}
+    .icon{font-size:30px}
+    .card p{color:var(--muted)}
+    .timeline{border-left:3px solid #90caf9;padding-left:28px}
+    .timeline-item{position:relative;margin-bottom:28px}
+    .timeline-item:before{content:"";width:13px;height:13px;background:var(--blue);border-radius:50%;position:absolute;left:-36px;top:9px}
+    .timeline-item h3{color:var(--navy)}
+    .quote{
+        margin-top:25px;padding:24px;border-left:5px solid var(--blue);
+        background:#eaf4ff;border-radius:12px;font-style:italic
+    }
+    .interest-card{display:flex;gap:18px;align-items:flex-start}
+    .interest-icon{font-size:34px}
+    .goal-box{background:linear-gradient(135deg,#102a43,#1976d2);color:white;border-radius:25px;padding:42px}
+    .goal-box h2{color:white}
+    .goal-box p{color:#e3f2fd;font-size:18px}
+    .idiom{color:#0d47a1;font-weight:700}
+    .travel{
+        background:linear-gradient(90deg,rgba(16,42,67,.9),rgba(16,42,67,.35)),
+        url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85') center/cover;
+        color:white;border-radius:28px;min-height:430px;display:flex;align-items:center;padding:55px
+    }
+    .travel h2{color:white}
+    .travel p{max-width:650px;color:#eef7ff;font-size:18px}
+    .contact{text-align:center;background:white;border-radius:25px;box-shadow:0 10px 30px rgba(16,42,67,.08)}
+    footer{background:var(--navy);color:#d9eaf7;text-align:center;padding:35px 20px}
+    footer strong{color:white}
+    @media(max-width:850px){
+        nav{flex-direction:column;gap:10px}
+        nav ul{gap:12px}
+        h1{font-size:48px}
+        .about-grid,.edu-grid,.interest-grid,.goal-grid{grid-template-columns:1fr}
+        .cards{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:560px){
+        section{padding:60px 6%}
+        h1{font-size:40px}
+        h2{font-size:32px}
+        .cards,.facts{grid-template-columns:1fr}
+        .travel{padding:30px}
+    }
+</style>
+</head>
+<body>
+
+<nav>
+    <div class="logo">Lazizbek</div>
+    <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#education">Education</a></li>
+        <li><a href="#skills">Skills</a></li>
+        <li><a href="#interests">Interests</a></li>
+        <li><a href="#goals">Goals</a></li>
+        <li><a href="#hobbies">Hobbies</a></li>
+        <li><a href="#contact">Contact</a></li>
+    </ul>
+</nav>
+
+<header class="hero" id="home">
+    <div class="hero-content">
+        <div class="tag">Student Portfolio • 2026</div>
+        <h1>Hello, I'm <span>Lazizbek</span></h1>
+        <p>
+            I am a first-year Integrated Business Management student at Dong-A University.
+            Originally from Uzbekistan, I am building my knowledge in international business
+            and technology while preparing for my future as an entrepreneur.
+        </p>
+        <div class="buttons">
+            <a class="btn primary" href="#about">Explore My Journey ↓</a>
+            <a class="btn secondary" href="#contact">Get to Know Me</a>
+        </div>
+    </div>
+</header>
+
+<section id="about">
+    <div class="section-title"><small>01 • About Me</small><h2>Who I Am</h2></div>
+    <div class="about-grid">
+        <img class="photo" src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=85" alt="Students studying together">
+        <div class="about-text">
+            <p>
+                My name is Lazizbek, and I am a first-year student at Dong-A University,
+                majoring in <strong>Integrated Business Management (IBM)</strong>. Coming
+                from Uzbekistan has given me an interest in different cultures, people,
+                and the way businesses operate across borders.
+            </p>
+            <p>
+                University is an important beginning for me. I am learning the basics of
+                business and developing the mindset I will need in the future. I believe
+                that <span class="idiom">every journey begins with a single step</span>,
+                and I am ready to keep learning one step at a time.
+            </p>
+            <div class="facts">
+                <div class="fact"><b>University</b><span>Dong-A University</span></div>
+                <div class="fact"><b>Major</b><span>Integrated Business Management</span></div>
+                <div class="fact"><b>Year</b><span>1st Year</span></div>
+                <div class="fact"><b>From</b><span>Uzbekistan</span></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="education" style="background:#eef5fb;max-width:none;">
+    <div style="max-width:1250px;margin:auto;">
+        <div class="section-title"><small>02 • Education</small><h2>My Academic Journey</h2></div>
+        <div class="edu-grid">
+            <div class="timeline">
+                <div class="timeline-item">
+                    <h3>Dong-A University</h3>
+                    <p><strong>Integrated Business Management (IBM)</strong></p>
+                    <p>
+                        I am currently studying business, management, and subjects that help
+                        me understand how organizations work in a global environment.
+                    </p>
+                </div>
+                <div class="timeline-item">
+                    <h3>Building My Foundation</h3>
+                    <p>
+                        As a first-year student, my focus is on learning the fundamentals,
+                        improving my communication, and discovering which areas of business
+                        I want to develop further.
+                    </p>
+                </div>
+                <div class="quote">
+                    “I want to <span class="idiom">learn the ropes</span> of business
+                    today so I can create something meaningful tomorrow.”
+                </div>
+            </div>
+            <img class="photo" src="https://images.unsplash.com/photo-1564981797816-1043664bf78d?auto=format&fit=crop&w=1200&q=85" alt="University campus">
+        </div>
+    </div>
+</section>
+
+<section id="skills">
+    <div class="section-title"><small>03 • Skills</small><h2>What I Am Developing</h2>
+        <p class="intro">I am at the beginning of my professional journey, so I am focusing on practical skills that will help me become a stronger student and future entrepreneur.</p>
+    </div>
+    <div class="cards">
+        <div class="card">
+            <div class="icon">🌎</div>
+            <h3>English Communication</h3>
+            <p>I am improving my English so I can communicate confidently with people from different countries and participate in international environments.</p>
+        </div>
+        <div class="card">
+            <div class="icon">💡</div>
+            <h3>Problem Solving</h3>
+            <p>I enjoy looking at challenges from different perspectives and searching for practical solutions instead of giving up when something is difficult.</p>
+        </div>
+        <div class="card">
+            <div class="icon">🚀</div>
+            <h3>Growth Mindset</h3>
+            <p>I believe mistakes can become useful lessons. I want to <span class="idiom">go the extra mile</span> when learning new things.</p>
+        </div>
+    </div>
+</section>
+
+<section id="interests" style="background:#eef5fb;max-width:none;">
+    <div style="max-width:1250px;margin:auto;">
+        <div class="section-title"><small>04 • Interests</small><h2>What Inspires Me</h2></div>
+        <div class="cards">
+            <div class="card interest-card">
+                <div class="interest-icon">🌐</div>
+                <div><h3>International Business</h3>
+                <p>I am interested in how companies connect countries, cultures, customers, and markets. I want to understand how businesses can grow in a global environment.</p></div>
+            </div>
+            <div class="card interest-card">
+                <div class="interest-icon">💻</div>
+                <div><h3>Technology</h3>
+                <p>Technology is changing the way people work and do business. I want to learn how new technologies can create opportunities and solve real-world problems.</p></div>
+            </div>
+            <div class="card interest-card">
+                <div class="interest-icon">🌱</div>
+                <div><h3>Personal Growth</h3>
+                <p>I want to keep learning, meet new people, and <span class="idiom">step out of my comfort zone</span> to gain experiences that will help me grow.</p></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="goals">
+    <div class="goal-grid">
+        <div class="goal-box">
+            <small>05 • Career Vision</small>
+            <h2>My Goal: Become an Entrepreneur</h2>
+            <p>
+                My long-term goal is to become an entrepreneur and start my own business.
+                I want to combine my knowledge of international business with technology
+                to develop useful ideas and create value for customers.
+            </p>
+            <p style="margin-top:18px;">
+                I know success does not happen overnight. I want to learn from experience,
+                work with motivated people, and <span style="color:white;font-weight:800;">turn my ideas into reality</span>.
+            </p>
+        </div>
+        <div>
+            <h2>From Student to Founder</h2>
+            <p style="margin-top:18px;">
+                Right now, I am concentrating on building a strong foundation. In the future,
+                I hope to identify problems that people face and develop business ideas that
+                can provide meaningful solutions.
+            </p>
+            <p style="margin-top:18px;">
+                My university experience is the starting point. I want to use every opportunity
+                to learn, build relationships, and prepare for the challenges of entrepreneurship.
+            </p>
+            <div class="quote">“Big things can grow from small beginnings.”</div>
+        </div>
+    </div>
+</section>
+
+<section id="hobbies">
+    <div class="section-title"><small>06 • Hobby</small><h2>Traveling & Exploring</h2></div>
+    <div class="travel">
+        <div>
+            <h2>Traveling gives me a new perspective.</h2>
+            <p style="margin-top:18px;">
+                One of my favorite hobbies is traveling. I enjoy discovering new places,
+                experiencing different cultures, meeting people, and seeing how everyday
+                life can be different around the world.
+            </p>
+            <p style="margin-top:16px;">
+                Traveling also connects with my interest in international business because
+                it helps me understand people and cultures beyond my own. Every trip can
+                <span style="font-weight:800;">open new doors</span> and teach me something new.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section id="contact">
+    <div class="contact" style="padding:55px;">
+        <div class="section-title" style="margin-bottom:20px;">
+            <small>07 • Contact</small><h2>Let's Connect</h2>
+        </div>
+        <p class="intro">
+            Thank you for visiting my student portfolio. I am always interested in learning
+            from new people, discovering new ideas, and growing through new experiences.
+        </p>
+        <p style="margin-top:18px;font-weight:bold;color:var(--blue);">
+            Lazizbek · Integrated Business Management · Dong-A University
+        </p>
+        <p style="margin-top:12px;">
+            <a href="mailto:laziznaimjonov21@gmail.com"
+               style="color:var(--blue);font-weight:bold;text-decoration:none;">
+                ✉ laziznaimjonov21@gmail.com
+            </a>
+        </p>
+    </div>
+</section>
+
+<footer>
+    <p><strong>Lazizbek</strong> | Student Portfolio</p>
+    <p>Integrated Business Management · Dong-A University · 2026</p>
+</footer>
+
+</body>
+</html>
