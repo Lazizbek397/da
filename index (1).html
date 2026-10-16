@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Island Escape</title>
+<style>
+  :root { color-scheme: dark; --panel:#132b2b; --panel2:#1d3c39; --cream:#f4edda; --muted:#b9c9bc; --gold:#f5c96b; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--cream); background:radial-gradient(ellipse at top,#27564a 0%,#142f2d 48%,#0c1d21 100%); }
+  .page { width:min(1180px,100%); margin:0 auto; padding:24px 18px 34px; }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+  h1 { margin:0; letter-spacing:.06em; font-size:clamp(1.7rem,4vw,2.5rem); color:#f7d98d; }
+  .subtitle { color:var(--muted); margin:5px 0 0; }
+  .tag { border:1px solid #5f8978; color:#d9ead8; border-radius:999px; padding:7px 12px; font-size:.85rem; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 270px; gap:16px; align-items:start; }
+  .game-panel,.side-panel { background:rgba(12,31,31,.78); border:1px solid #456a5c; border-radius:18px; box-shadow:0 16px 40px #06151555; overflow:hidden; }
+  .game-top { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 16px; background:rgba(255,255,255,.035); flex-wrap:wrap; }
+  .status { font-weight:700; color:#f7d98d; }
+  .tiny { color:var(--muted); font-size:.88rem; }
+  .canvas-wrap { padding:12px; }
+  canvas { display:block; width:100%; height:auto; border-radius:10px; background:#7cba77; outline:none; image-rendering:pixelated; }
+  .side-panel { padding:17px; }
+  h2 { font-size:1.08rem; margin:0 0 12px; color:#f7d98d; }
+  .readout { padding:11px 12px; border-radius:12px; background:var(--panel2); margin-bottom:10px; }
+  .readout .label { font-size:.75rem; text-transform:uppercase; letter-spacing:.09em; color:#a9c7b4; }
+  .readout .value { font-weight:700; margin-top:3px; }
+  .animal-state { display:flex; gap:8px; align-items:center; }
+  .dot { width:10px;height:10px;border-radius:50%;background:#88d18a;box-shadow:0 0 0 4px #88d18a22; }
+  .dot.alert { background:#ff6f61;box-shadow:0 0 0 4px #ff6f6122; }
+  .dot.search { background:#f6c75c;box-shadow:0 0 0 4px #f6c75c22; }
+  .controls { list-style:none; padding:0; margin:0; display:grid; gap:9px; }
+  .controls li { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#d6e2d7; font-size:.9rem; }
+  kbd { min-width:58px; text-align:center; border:1px solid #648477; background:#0d2425; color:#fff2c9; padding:4px 7px; border-radius:6px; font:600 .78rem ui-monospace,SFMono-Regular,monospace; }
+  .rule { height:1px; background:#3d5d53; margin:16px 0; }
+  .legend { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:.82rem; color:#d5e2d6; }
+  .legend span { display:flex; align-items:center; gap:7px; }
+  .swatch { width:15px;height:15px;border-radius:4px;border:1px solid #ffffff38;display:inline-block;flex:none; }
+  button { cursor:pointer; border:0; border-radius:10px; background:#f3c967; color:#20332a; font-weight:800; padding:11px 15px; font-size:.95rem; transition:transform .12s,filter .12s; }
+  button:hover { filter:brightness(1.06); transform:translateY(-1px); }
+  button:focus-visible { outline:3px solid #fff2bf; outline-offset:3px; }
+  .restart { width:100%; margin-top:12px; }
+  .hint { font-size:.82rem; color:#adc3b4; line-height:1.5; margin:12px 0 0; }
+  .overlay { position:fixed; inset:0; background:#071515b8; display:flex; align-items:center; justify-content:center; padding:18px; z-index:5; }
+  .overlay[hidden] { display:none; }
+  .modal { width:min(430px,100%); background:#16312e; border:1px solid #6d9880; border-radius:20px; text-align:center; padding:28px; box-shadow:0 22px 70px #0008; }
+  .modal h2 { font-size:2rem; margin-bottom:8px; }
+  .modal p { color:#d0dfd1; line-height:1.5; }
+  .modal button { min-width:160px; margin-top:8px; }
+  footer { text-align:center; color:#9bb5a6; font-size:.8rem; margin-top:16px; }
+  @media(max-width:850px) { .layout{grid-template-columns:1fr;} .side-panel{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;} .side-panel h2:first-child,.side-panel .full{grid-column:1/-1;} }
+  @media(max-width:520px) { .page{padding:14px 9px 24px;} .canvas-wrap{padding:6px;} .side-panel{display:block;padding:13px;} .game-top{padding:10px 12px;} }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div><h1>ISLAND ESCAPE</h1><p class="subtitle">Stay quiet. Watch the wolf. Find your way to the boat.</p></div>
+    <div class="tag">A stealth survival game</div>
+  </header>
+  <main class="layout">
+    <section class="game-panel" aria-label="Game board">
+      <div class="game-top"><span class="status" id="gameStatus">Find the boat and escape.</span><span class="tiny" id="positionReadout">Tile 1, 1</span></div>
+      <div class="canvas-wrap"><canvas id="gameCanvas" width="800" height="560" tabindex="0" aria-label="Island Escape game map"></canvas></div>
+    </section>
+    <aside class="side-panel">
+      <h2 class="full">Survival status</h2>
+      <div class="readout"><div class="label">Movement mode</div><div class="value" id="movementMode">Walking</div></div>
+      <div class="readout"><div class="label">Animal alert</div><div class="value animal-state"><i class="dot" id="alertDot"></i><span id="animalState">Patrolling</span></div></div>
+      <div class="readout"><div class="label">Hiding</div><div class="value" id="hidingStatus">Not hiding</div></div>
+      <div class="readout"><div class="label">Time survived</div><div class="value" id="timeReadout">0:00</div></div>
+      <div class="rule full"></div>
+      <h2 class="full">Controls</h2>
+      <ul class="controls full">
+        <li><span>Move</span><kbd>W A S D</kbd></li><li><span>Move (also)</span><kbd>↑ ← ↓ →</kbd></li><li><span>Run while moving</span><kbd>SHIFT</kbd></li><li><span>Sneak while moving</span><kbd>C</kbd></li><li><span>Hide / leave bush</span><kbd>SPACE</kbd></li>
+      </ul>
+      <p class="hint full">Running is fast but loud. Sneaking is slow and quiet. Hide in a bush to avoid being seen, then wait for the wolf to move away.</p>
+      <div class="rule full"></div>
+      <h2 class="full">Island legend</h2>
+      <div class="legend full"><span><i class="swatch" style="background:#7fbd76"></i>Grass</span><span><i class="swatch" style="background:#276344"></i>Bush</span><span><i class="swatch" style="background:#254b35"></i>Tree</span><span><i class="swatch" style="background:#7c8586"></i>Rock</span><span><i class="swatch" style="background:#e7b84f"></i>Boat</span><span><i class="swatch" style="background:#e6f2ee"></i>You</span></div>
+      <button class="restart full" id="restartButton" type="button">New Island / Restart</button>
+    </aside>
+  </main>
+  <footer>Island Escape · Random island every run · Built with HTML, CSS and JavaScript</footer>
+</div>
+<div class="overlay" id="endOverlay" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+    <h2 id="endTitle">You Escaped!</h2><p id="endMessage">You reached the boat and escaped the island.</p><button id="playAgainButton" type="button">Play Again</button>
+  </div>
+</div>
+<script>
+(() => {
+  'use strict';
+  const COLS = 20, ROWS = 14, TILE = 40;
+  const TILE_GRASS = 'grass', TILE_TREE = 'tree', TILE_ROCK = 'rock', TILE_BUSH = 'bush';
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const el = {
+    gameStatus: document.getElementById('gameStatus'), position: document.getElementById('positionReadout'),
+    movement: document.getElementById('movementMode'), animal: document.getElementById('animalState'),
+    alertDot: document.getElementById('alertDot'), hiding: document.getElementById('hidingStatus'),
+    time: document.getElementById('timeReadout'), overlay: document.getElementById('endOverlay'),
+    endTitle: document.getElementById('endTitle'), endMessage: document.getElementById('endMessage')
+  };
+  canvas.width = COLS * TILE; canvas.height = ROWS * TILE;
+
+  let map, player, wolf, boat, gameState, startTime, elapsed, lastFrame, accumulator, moveAccumulator, animalAccumulator, keys, hiding, lastKnown, searchTime, soundTarget, animalState, patrol, patrolIndex, visibleCells, messageUntil, lastNoiseAt;
+
+  const keyDirections = {
+    ArrowUp: [0,-1], KeyW: [0,-1], ArrowDown: [0,1], KeyS: [0,1],
+    ArrowLeft: [-1,0], KeyA: [-1,0], ArrowRight: [1,0], KeyD: [1,0]
+  };
+  const inside = (x,y) => x >= 0 && y >= 0 && x < COLS && y < ROWS;
+  const keyOf = (x,y) => `${x},${y}`;
+  const manhattan = (a,b) => Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+  const isSolid = (x,y) => !inside(x,y) || map[y][x] === TILE_TREE || map[y][x] === TILE_ROCK;
+  const canWalk = (x,y) => inside(x,y) && !isSolid(x,y);
+  const randInt = n => Math.floor(Math.random()*n);
+  const same = (a,b) => a.x === b.x && a.y === b.y;
+
+  function bfs(start, goal, allowAnimal = true) {
+    const queue = [{x:start.x,y:start.y}], prev = new Map(), seen = new Set([keyOf(start.x,start.y)]);
+    let found = false;
+    for (let qi=0; qi<queue.length; qi++) {
+      const p = queue[qi];
+      if (same(p,goal)) { found = true; break; }
+      for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const x=p.x+dx,y=p.y+dy,k=keyOf(x,y);
+        if (!canWalk(x,y) || seen.has(k)) continue;
+        seen.add(k); prev.set(k,keyOf(p.x,p.y)); queue.push({x,y});
+      }
+    }
+    if (!found) return [];
+    const path=[]; let cur=keyOf(goal.x,goal.y), startKey=keyOf(start.x,start.y);
+    while (cur !== startKey) {
+      const [x,y]=cur.split(',').map(Number); path.push({x,y}); cur=prev.get(cur);
+      if (!cur) return [];
+    }
+    path.reverse(); return path;
+  }
+
+  function randomOpenCell(excluded, preferInterior = false) {
+    for (let tries=0; tries<3000; tries++) {
+      const x=randInt(COLS), y=randInt(ROWS), k=keyOf(x,y);
+      if (excluded.has(k) || (preferInterior && (x<2 || y<2 || x>COLS-3 || y>ROWS-3))) continue;
+      if (map[y][x] === TILE_GRASS) return {x,y};
+    }
+    for (let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(map[y][x]===TILE_GRASS && !excluded.has(keyOf(x,y))) return {x,y};
+    return {x:1,y:1};
+  }
+
+  function generateMap() {
+    // Retry generation until a walkable route exists between the fixed corners.
+    const start={x:0,y:0}, exit={x:COLS-1,y:ROWS-1};
+    let tries=0, candidate;
+    do {
+      map=Array.from({length:ROWS},()=>Array(COLS).fill(TILE_GRASS));
+      const protectedCells=new Set([keyOf(start.x,start.y),keyOf(exit.x,exit.y),keyOf(1,0),keyOf(0,1),keyOf(COLS-2,ROWS-1),keyOf(COLS-1,ROWS-2)]);
+      // Scatter 15-20% solid obstacles, leaving a few guaranteed corridor cells clear.
+      const solidCount=Math.floor(COLS*ROWS*(0.15+Math.random()*0.05));
+      for(let i=0;i<solidCount;i++) {
+        const p={x:randInt(COLS),y:randInt(ROWS)};
+        if(protectedCells.has(keyOf(p.x,p.y))) continue;
+        map[p.y][p.x]=Math.random()<0.58?TILE_TREE:TILE_ROCK;
+      }
+      // Add walkable cover after obstacles are placed.
+      const bushCount=22+randInt(9);
+      for(let i=0;i<bushCount;i++) {
+        const p={x:randInt(COLS),y:randInt(ROWS)};
+        if(protectedCells.has(keyOf(p.x,p.y))) continue;
+        if(map[p.y][p.x]===TILE_GRASS) map[p.y][p.x]=TILE_BUSH;
+      }
+      candidate=bfs(start,exit); tries++;
+    } while(candidate.length===0 && tries<100);
+    // A guaranteed fallback path prevents impossible maps even if random retries fail.
+    if(candidate.length===0) {
+      map=Array.from({length:ROWS},()=>Array(COLS).fill(TILE_GRASS));
+      for(let y=1;y<ROWS-1;y++) for(let x=1;x<COLS-1;x++) if(Math.random()<0.14) map[y][x]=TILE_TREE;
+      for(let x=0;x<COLS;x++) map[0][x]=TILE_GRASS;
+      for(let y=0;y<ROWS;y++) map[y][COLS-1]=TILE_GRASS;
+      candidate=bfs(start,exit);
+    }
+    boat={x:COLS-1,y:ROWS-1};
+    player={x:0,y:0};
+    const excluded=new Set([keyOf(player.x,player.y),keyOf(boat.x,boat.y)]);
+    wolf=randomOpenCell(excluded,true); excluded.add(keyOf(wolf.x,wolf.y));
+    // Avoid starting the wolf directly beside the player, when possible.
+    if(manhattan(wolf,player)<5) {
+      const far=[];
+      for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(map[y][x]===TILE_GRASS && !excluded.has(keyOf(x,y)) && manhattan({x,y},player)>=5) far.push({x,y});
+      if(far.length) wolf=far[randInt(far.length)];
+    }
+    // Patrol route consists of reachable nearby grass/bush cells.
+    patrol=[{x:wolf.x,y:wolf.y}];
+    let current={x:wolf.x,y:wolf.y};
+    for(let i=0;i<5;i++) {
+      const opts=[];
+      for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) {
+        if((map[y][x]===TILE_GRASS||map[y][x]===TILE_BUSH) && manhattan(current,{x,y})>=2 && manhattan(current,{x,y})<=6 && bfs(current,{x,y}).length>0) opts.push({x,y});
+      }
+      if(!opts.length) break;
+      current=opts[randInt(opts.length)]; patrol.push(current);
+    }
+    patrolIndex=0;
+  }
+
+  function resetGame() {
+    generateMap(); gameState='playing'; startTime=performance.now(); elapsed=0; lastFrame=performance.now();
+    accumulator=0; moveAccumulator=0; animalAccumulator=0; keys=new Set(); hiding=false;
+    lastKnown=null; searchTime=0; soundTarget=null; animalState='patrolling'; visibleCells=new Set();
+    messageUntil=0; lastNoiseAt=0;
+    el.overlay.hidden=true; el.gameStatus.textContent='Find the boat and escape.';
+    updateUI(); draw(); canvas.focus();
+  }
+
+  function movementMode() {
+    if(hiding) return 'Hiding';
+    if(keys.has('ShiftLeft')||keys.has('ShiftRight')) return 'Running';
+    if(keys.has('KeyC')) return 'Sneaking';
+    return 'Walking';
+  }
+  function speedForMode(mode) { return mode==='Running'?6:mode==='Sneaking'?2:4; }
+  function noiseRangeForMode(mode) { return mode==='Running'?6:mode==='Sneaking'?1:3; }
+
+  function canSee(from,to) {
+    if(manhattan(from,to)>5) return false;
+    // Grid ray check (Bresenham): solids block vision. The target cell itself may be occupied by player.
+    let x0=from.x,y0=from.y,x1=to.x,y1=to.y;
+    const dx=Math.abs(x1-x0), sx=x0<x1?1:-1, dy=-Math.abs(y1-y0), sy=y0<y1?1:-1;
+    let err=dx+dy;
+    while(!(x0===x1&&y0===y1)) {
+      const e2=2*err;
+      if(e2>=dy){err+=dy;x0+=sx;}
+      if(e2<=dx){err+=dx;y0+=sy;}
+      if(x0===x1&&y0===y1) break;
+      if(isSolid(x0,y0)) return false;
+    }
+    return true;
+  }
+
+  function computeVisible() {
+    visibleCells=new Set();
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) {
+      const p={x,y}; if(manhattan(player,p)<=5 && canSee(player,p)) visibleCells.add(keyOf(x,y));
+    }
+    // The player always sees adjacent tiles and their own tile.
+    visibleCells.add(keyOf(player.x,player.y));
+  }
+
+  function emitNoise() {
+    const mode=movementMode();
+    if(hiding) return;
+    const range=noiseRangeForMode(mode);
+    if(manhattan(player,wolf)<=range) {
+      soundTarget={x:player.x,y:player.y}; lastKnown={x:player.x,y:player.y};
+      if(animalState!=='chasing') { animalState='searching'; searchTime=1.8; }
+    }
+  }
+
+  function movePlayer(dx,dy) {
+    if(gameState!=='playing'||hiding) return;
+    const nx=player.x+dx,ny=player.y+dy;
+    if(!canWalk(nx,ny)) return;
+    // Player and wolf cannot occupy the same tile.
+    if(nx===wolf.x&&ny===wolf.y) { endGame(false); return; }
+    player.x=nx;player.y=ny;
+    const mode=movementMode();
+    emitNoise();
+    checkDetection();
+    if(same(player,boat)) endGame(true);
+    updateUI();
+  }
+
+  function toggleHide() {
+    if(gameState!=='playing') return;
+    if(hiding) { hiding=false; el.gameStatus.textContent='You leave the bush. Stay alert.'; }
+    else if(map[player.y][player.x]===TILE_BUSH) { hiding=true; el.gameStatus.textContent='Hidden in the bush. Wait for the wolf to move away.'; }
+    else { el.gameStatus.textContent='You can only hide while standing in a bush.'; messageUntil=performance.now()+1800; }
+    checkDetection(); updateUI(); draw();
+  }
+
+  function checkDetection() {
+    if(gameState!=='playing') return;
+    if(hiding) return;
+    if(canSee(wolf,player)) {
+      animalState='chasing'; lastKnown={x:player.x,y:player.y}; soundTarget=null; searchTime=0;
+      el.gameStatus.textContent='The wolf spotted you! Break line of sight or hide.';
+      messageUntil=performance.now()+2200;
+    }
+  }
+
+  function moveWolfToward(target) {
+    if(!target) return;
+    const path=bfs(wolf,target);
+    if(path.length===0) return;
+    const next=path[0];
+    wolf.x=next.x; wolf.y=next.y;
+    if(!hiding && same(wolf,player)) { endGame(false); return; }
+  }
+
+  function animalStep() {
+    if(gameState!=='playing') return;
+    checkDetection();
+    if(animalState==='chasing') {
+      if(!hiding && canSee(wolf,player)) lastKnown={x:player.x,y:player.y};
+      else if(!hiding && soundTarget && manhattan(wolf,soundTarget)<=6) lastKnown={x:soundTarget.x,y:soundTarget.y};
+      if(lastKnown) {
+        moveWolfToward(lastKnown);
+        if(lastKnown && same(wolf,lastKnown) && (hiding || !canSee(wolf,player))) { animalState='searching'; searchTime=3; soundTarget=null; }
+      } else { animalState='searching'; searchTime=3; }
+    } else if(animalState==='searching') {
+      if(!hiding && canSee(wolf,player)) { animalState='chasing'; lastKnown={x:player.x,y:player.y}; }
+      else {
+        searchTime-=0.5;
+        if(lastKnown && !same(wolf,lastKnown)) moveWolfToward(lastKnown);
+        else if(searchTime<=0) { animalState='returning'; lastKnown=null; }
+        if(searchTime<=0) { animalState='returning'; lastKnown=null; }
+      }
+    } else if(animalState==='returning') {
+      const target=patrol[patrolIndex]||patrol[0];
+      if(target && same(wolf,target)) { animalState='patrolling'; patrolIndex=(patrolIndex+1)%Math.max(1,patrol.length); }
+      else moveWolfToward(target);
+    } else {
+      const target=patrol[patrolIndex]||patrol[0];
+      if(target && same(wolf,target)) patrolIndex=(patrolIndex+1)%Math.max(1,patrol.length);
+      else moveWolfToward(target);
+    }
+    checkDetection();
+    if(!hiding && same(wolf,player)) endGame(false);
+  }
+
+  function endGame(won) {
+    if(gameState!=='playing') return;
+    gameState=won?'won':'lost'; hiding=false;
+    const seconds=Math.floor((performance.now()-startTime)/1000);
+    el.endTitle.textContent=won?'You Escaped!':'Game Over';
+    el.endMessage.textContent=won?`You reached the boat in ${formatTime(seconds)}. Smart movement and good timing got you off the island.`:`The wolf caught you after ${formatTime(seconds)}. Try sneaking, hiding in bushes, and waiting for the wolf to leave.`;
+    el.overlay.hidden=false;
+    el.gameStatus.textContent=won?'Escape successful!':'The wolf caught you.';
+    updateUI(); draw();
+  }
+
+  function formatTime(seconds) { return `${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`; }
+  function updateUI() {
+    el.movement.textContent=movementMode(); el.hiding.textContent=hiding?'Hidden in a bush':'Not hiding';
+    el.position.textContent=`Tile ${player.x+1}, ${player.y+1}`;
+    el.animal.textContent=animalState.charAt(0).toUpperCase()+animalState.slice(1);
+    el.alertDot.className='dot'+(animalState==='chasing'?' alert':animalState==='searching'?' search':'');
+    if(gameState==='playing') el.time.textContent=formatTime(Math.floor((performance.now()-startTime)/1000));
+  }
+
+  function roundedRect(x,y,w,h,r,fill,stroke) {
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+    if(fill){ctx.fillStyle=fill;ctx.fill();} if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
+  }
+
+  function drawTile(x,y,type) {
+    const px=x*TILE,py=y*TILE;
+    ctx.fillStyle=((x+y)%2===0)?'#82c17b':'#79b873';ctx.fillRect(px,py,TILE,TILE);
+    // Small grass strokes add texture without obscuring gameplay.
+    ctx.strokeStyle='#5da568';ctx.globalAlpha=.42;ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(px+7,py+31);ctx.lineTo(px+10,py+25);ctx.moveTo(px+29,py+12);ctx.lineTo(px+32,py+8);ctx.stroke();ctx.globalAlpha=1;
+    if(type===TILE_TREE) {
+      ctx.fillStyle='#60442e';ctx.fillRect(px+17,py+21,7,15);
+      ctx.fillStyle='#275b3a';ctx.beginPath();ctx.arc(px+20,py+17,14,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#34754a';ctx.beginPath();ctx.arc(px+15,py+14,8,0,Math.PI*2);ctx.fill();
+    } else if(type===TILE_ROCK) {
+      ctx.fillStyle='#687b7b';ctx.beginPath();ctx.moveTo(px+7,py+31);ctx.lineTo(px+10,py+15);ctx.lineTo(px+20,py+8);ctx.lineTo(px+32,py+14);ctx.lineTo(px+35,py+29);ctx.lineTo(px+25,py+34);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#9aa8a0';ctx.beginPath();ctx.moveTo(px+10,py+15);ctx.lineTo(px+20,py+8);ctx.lineTo(px+24,py+18);ctx.lineTo(px+15,py+23);ctx.closePath();ctx.fill();
+    } else if(type===TILE_BUSH) {
+      ctx.fillStyle='#245d3c';ctx.beginPath();ctx.arc(px+15,py+25,10,0,Math.PI*2);ctx.arc(px+25,py+23,11,0,Math.PI*2);ctx.arc(px+20,py+16,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#3b8850';ctx.beginPath();ctx.arc(px+16,py+17,5,0,Math.PI*2);ctx.arc(px+26,py+22,5,0,Math.PI*2);ctx.fill();
+    }
+    ctx.strokeStyle='rgba(26,78,54,.17)';ctx.strokeRect(px,py,TILE,TILE);
+  }
+
+  function drawBoat() {
+    const x=boat.x*TILE,y=boat.y*TILE;
+    ctx.save();ctx.translate(x+20,y+21);
+    ctx.fillStyle='#79502f';ctx.beginPath();ctx.moveTo(-16,2);ctx.lineTo(16,2);ctx.lineTo(10,12);ctx.lineTo(-10,12);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#e8c36a';ctx.fillRect(-1,-15,2,18);
+    ctx.fillStyle='#fff0bc';ctx.beginPath();ctx.moveTo(1,-14);ctx.lineTo(12,-3);ctx.lineTo(1,-3);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#f1a44f';ctx.beginPath();ctx.moveTo(-1,-11);ctx.lineTo(-10,-2);ctx.lineTo(-1,-2);ctx.closePath();ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle='#f9dc82';ctx.lineWidth=2;ctx.strokeRect(x+3,y+3,TILE-6,TILE-6);
+  }
+
+  function drawPlayer() {
+    const x=player.x*TILE+20,y=player.y*TILE+20;
+    ctx.save();
+    if(hiding) { ctx.globalAlpha=.78; }
+    ctx.fillStyle='#183d42';ctx.beginPath();ctx.ellipse(x,y+7,10,5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e7f1e9';ctx.beginPath();ctx.arc(x,y-1,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#d0a16e';ctx.beginPath();ctx.arc(x,y-5,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#365e6a';ctx.fillRect(x-6,y+3,12,8);
+    if(hiding) { ctx.strokeStyle='#a5e3a4';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,15,0,Math.PI*2);ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function drawWolf() {
+    if(!visibleCells.has(keyOf(wolf.x,wolf.y))) return;
+    // Do not reveal a hidden player to the wolf visually; drawing follows player's vision instead.
+    const x=wolf.x*TILE+20,y=wolf.y*TILE+20;
+    ctx.save();
+    ctx.fillStyle='#273033';ctx.beginPath();ctx.ellipse(x,y+4,13,9,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(x-9,y-3);ctx.lineTo(x-12,y-14);ctx.lineTo(x-3,y-8);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(x+5,y-7);ctx.lineTo(x+12,y-14);ctx.lineTo(x+12,y-2);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#b7c1b8';ctx.beginPath();ctx.ellipse(x+5,y,6,4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#e5bd64';ctx.beginPath();ctx.arc(x+8,y-2,1.5,0,Math.PI*2);ctx.fill();
+    if(animalState==='chasing') { ctx.strokeStyle='#ff705f';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,17,0,Math.PI*2);ctx.stroke(); }
+    ctx.restore();
+  }
+
+  function draw() {
+    if(!ctx||!map) return;
+    computeVisible();
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) drawTile(x,y,map[y][x]);
+    // Light fog-of-war keeps unseen animal positions secret while preserving navigable terrain.
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) {
+      if(!visibleCells.has(keyOf(x,y))) {
+        ctx.fillStyle='rgba(13,35,33,.43)';ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+      }
+    }
+    drawBoat(); drawWolf(); drawPlayer();
+    if(hiding) {
+      ctx.fillStyle='rgba(8,35,23,.72)';roundedRect(10,10,166,30,8,ctx.fillStyle);
+      ctx.fillStyle='#c7f1be';ctx.font='bold 13px system-ui';ctx.fillText('HIDDEN IN BUSH',20,30);
+    }
+    if(gameState==='playing' && performance.now()<messageUntil) {
+      ctx.fillStyle='rgba(9,31,28,.86)';roundedRect(120,canvas.height-48,canvas.width-240,34,9,ctx.fillStyle);
+      ctx.fillStyle='#fff0c7';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.fillText(el.gameStatus.textContent,canvas.width/2,canvas.height-27);ctx.textAlign='left';
+    }
+  }
+
+  function frame(now) {
+    if(gameState==='playing') {
+      const dt=Math.min((now-lastFrame)/1000,0.08); elapsed=(now-startTime)/1000;
+      moveAccumulator+=dt; animalAccumulator+=dt;
+      // Grid-step movement is intentionally paced by the selected speed.
+      const mode=movementMode(), speed=speedForMode(mode), stepTime=1/speed;
+      while(moveAccumulator>=stepTime) {
+        moveAccumulator-=stepTime;
+        if(!hiding) {
+          let dir=null;
+          for(const [code,d] of Object.entries(keyDirections)) if(keys.has(code)) { dir=d; break; }
+          if(dir) movePlayer(dir[0],dir[1]);
+        }
+        if(gameState!=='playing') break;
+      }
+      // Wolf moves in discrete steps at its state speed.
+      const wolfSpeed=animalState==='chasing'?4:2, wolfStep=1/wolfSpeed;
+      while(animalAccumulator>=wolfStep) { animalAccumulator-=wolfStep; animalStep(); if(gameState!=='playing') break; }
+      updateUI(); draw();
+    }
+    lastFrame=now;
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('keydown',e=>{
+    const code=e.code;
+    if(code in keyDirections || ['Space','ShiftLeft','ShiftRight','KeyC'].includes(code)) e.preventDefault();
+    if(code==='Space' && !e.repeat) { toggleHide(); return; }
+    if(gameState!=='playing') return;
+    keys.add(code);
+    if(code in keyDirections) {
+      // Immediate first movement keeps keyboard controls responsive.
+      const d=keyDirections[code]; movePlayer(d[0],d[1]); moveAccumulator=0;
+    }
+    updateUI();
+  });
+  window.addEventListener('keyup',e=>{ keys.delete(e.code); updateUI(); });
+  window.addEventListener('blur',()=>{ keys.clear(); });
+  document.getElementById('restartButton').addEventListener('click',resetGame);
+  document.getElementById('playAgainButton').addEventListener('click',resetGame);
+
+  // Small exposed test surface for optional browser-console checks. It does not affect gameplay.
+  window.IslandEscapeTests = {
+    isInside: inside,
+    isReachable: () => bfs({x:0,y:0},boat).length>0,
+    mapDimensions: () => ({columns:map[0].length,rows:map.length}),
+    gameState: () => gameState
+  };
+
+  resetGame();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
