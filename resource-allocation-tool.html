@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Detectives | Resource Allocation Tool</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#172033;--muted:#64748b;--line:#dce3ee;--blue:#2563eb;--blue2:#dbeafe;--green:#15803d;--red:#b91c1c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Arial,sans-serif}
+header{background:#172554;color:white;padding:25px max(20px,calc((100% - 1180px)/2))}
+header h1{margin:0 0 5px;font-size:27px}header p{margin:0;color:#dbeafe}
+main{max-width:1180px;margin:22px auto;padding:0 16px 40px}
+.section{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:20px;margin:0 0 18px;box-shadow:0 2px 8px #0f172a08}
+h2{font-size:19px;margin:0 0 12px}h3{font-size:16px;margin:14px 0 8px}
+small,.muted{color:var(--muted)}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.field{display:flex;flex-direction:column;gap:5px;min-width:160px;flex:1}
+label{font-size:13px;font-weight:700;color:#334155}
+input,select,textarea,button{font:inherit;border:1px solid #cbd5e1;border-radius:8px;padding:9px 11px;background:white;color:var(--ink)}
+input[type=file]{padding:7px}button{background:var(--blue);border-color:var(--blue);color:white;font-weight:700;cursor:pointer}
+button.secondary{background:white;color:#334155;border-color:#cbd5e1}button.danger{background:#b91c1c;border-color:#b91c1c}
+button:disabled{opacity:.5;cursor:not-allowed}
+.status{margin-top:10px;padding:10px;border-radius:8px;background:#eff6ff;color:#1e40af}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}
+.stat{padding:13px;border:1px solid var(--line);border-radius:10px;background:#fbfdff}
+.stat strong{display:block;font-size:22px;margin-top:3px;overflow-wrap:anywhere}
+.table-wrap{overflow:auto;max-height:430px;border:1px solid var(--line);border-radius:9px;margin-top:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+th{background:#eff4fb;position:sticky;top:0;z-index:1}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;background:#e2e8f0;font-size:12px}
+.good{color:var(--green)}.bad{color:var(--red)}
+#chart{width:100%;height:300px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.note{font-size:13px;color:var(--muted);margin:7px 0 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:700px){.two{grid-template-columns:1fr}header h1{font-size:22px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Data Detectives: Resource Allocation Analysis</h1>
+  <p>Upload, inspect, clean, analyse, visualise and export your dataset.</p>
+</header>
+<main>
+<section class="section">
+  <h2>T1. Upload and understand the dataset</h2>
+  <div class="row">
+    <div class="field"><label for="csvFile">Choose CSV file</label><input id="csvFile" type="file" accept=".csv,text/csv"></div>
+    <button id="loadSample" class="secondary" type="button">Load sample structure</button>
+  </div>
+  <div id="uploadStatus" class="status">Upload Resource_Allocation_Records.csv to begin.</div>
+  <div id="datasetSummary" class="stats-grid" style="margin-top:12px"></div>
+  <h3>Column information</h3>
+  <div id="columnInfo" class="table-wrap"><p class="note" style="padding:10px">Column details will appear after uploading a CSV.</p></div>
+</section>
+
+<section class="section">
+  <h2>T2. Search, filter and sort records</h2>
+  <div class="row">
+    <div class="field"><label for="searchText">Search all columns</label><input id="searchText" placeholder="Type a word or value"></div>
+    <div class="field"><label for="filterColumn">Filter column</label><select id="filterColumn"><option value="">Choose column</option></select></div>
+    <div class="field"><label for="filterValue">Contains / equals</label><input id="filterValue" placeholder="Filter value"></div>
+    <div class="field"><label for="sortColumn">Sort by</label><select id="sortColumn"><option value="">Choose column</option></select></div>
+    <div class="field"><label for="sortOrder">Order</label><select id="sortOrder"><option value="asc">Ascending</option><option value="desc">Descending</option></select></div>
+  </div>
+  <div class="row" style="margin-top:10px"><button id="applyFilter">Apply search / filter / sort</button><button id="resetView" class="secondary">Reset view and data</button></div>
+  <p id="viewCount" class="note">No data loaded.</p>
+  <div id="recordsTable" class="table-wrap"></div>
+</section>
+
+<section class="section">
+  <h2>T3. Data quality and manual correction</h2>
+  <button id="qualityCheck" type="button">Run data quality check</button>
+  <div id="qualityResults" class="stats-grid" style="margin-top:12px"></div>
+  <h3>Manual correction</h3>
+  <div class="row">
+    <div class="field"><label for="editRecord">Record number (visible row number)</label><input id="editRecord" type="number" min="1" placeholder="e.g. 1"></div>
+    <div class="field"><label for="editColumn">Column</label><select id="editColumn"><option value="">Choose column</option></select></div>
+    <div class="field"><label for="editValue">New value</label><input id="editValue" placeholder="Enter corrected value"></div>
+  </div>
+  <div class="row" style="margin-top:10px"><button id="previewEdit" class="secondary">Preview correction</button><button id="applyEdit">Apply correction</button></div>
+  <div id="editPreview" class="status" style="display:none"></div>
+  <h3>Change log</h3><div id="changeLogTable" class="table-wrap"></div>
+</section>
+
+<section class="section">
+  <h2>T4. Descriptive statistics</h2>
+  <div class="row">
+    <div class="field"><label for="statsColumn">Numeric column</label><select id="statsColumn"><option value="">Select a column</option></select></div>
+    <button id="calculateStats">Calculate statistics</button>
+  </div>
+  <div id="statsResults" class="stats-grid" style="margin-top:12px"></div>
+  <p class="note">Values that cannot be converted to numbers are excluded from the calculations.</p>
+</section>
+
+<section class="section">
+  <h2>T5. Chart and outlier analysis</h2>
+  <div class="row">
+    <div class="field"><label for="chartColumn">Numeric column</label><select id="chartColumn"><option value="">Select a column</option></select></div>
+    <button id="drawChart">Draw histogram</button>
+    <button id="findOutliers" class="secondary">Detect outliers</button>
+  </div>
+  <canvas id="chart" width="1000" height="300"></canvas>
+  <div id="outlierResults" class="stats-grid" style="margin-top:12px"></div>
+  <div id="comparisonResults"></div>
+</section>
+
+<section class="section">
+  <h2>T6. Export cleaned data and change log</h2>
+  <div class="row">
+    <button id="downloadClean">Download Cleaned CSV</button>
+    <button id="downloadLog" class="secondary">Download Change Log</button>
+  </div>
+  <p class="note">The cleaned file contains your current dataset. The change log records each manual correction.</p>
+</section>
+</main>
+<script>
+"use strict";
+let datasetHeaders = [];
+let datasetRecords = [];
+let originalRecords = [];
+let changeLog = [];
+let pendingChange = null;
+let filteredIndices = [];
+
+const $ = id => document.getElementById(id);
+const expectedColumns = ["TransactionID","Date","Agency","ResponsibleDepartment","RequestType","ProjectCode","CostCentreCode","ResourceCategory","RequestedAmount","Amount","Unit","ApprovalStatus","ReviewOfficerID","DestinationSiteID","Description","Notes"];
+
+function parseCSV(text) {
+  text = text.replace(/^\uFEFF/, "");
+  const rows = [];
+  let row = [], field = "", quoted = false;
+  for (let i=0; i<text.length; i++) {
+    const ch = text[i], next = text[i+1];
+    if (ch === '"') {
+      if (quoted && next === '"') { field += '"'; i++; }
+      else quoted = !quoted;
+    } else if (ch === "," && !quoted) {
+      row.push(field); field = "";
+    } else if ((ch === "\n" || ch === "\r") && !quoted) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(field); field = "";
+      if (row.some(v => v.trim() !== "")) rows.push(row);
+      row = [];
+    } else field += ch;
+  }
+  row.push(field);
+  if (row.some(v => v.trim() !== "")) rows.push(row);
+  return rows;
+}
+function escapeHTML(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function isNumericValue(v) {
+  if (v === null || String(v).trim() === "") return false;
+  return Number.isFinite(Number(String(v).replace(/,/g,"").replace(/[$₩]/g,"").trim()));
+}
+function numericValues(index, records=datasetRecords) {
+  return records.map(r => Number(String(r[index] ?? "").replace(/,/g,"").replace(/[$₩]/g,"").trim()))
+    .filter(n => Number.isFinite(n));
+}
+function populateSelect(id, headers, includeAll=true) {
+  const select = $(id);
+  select.innerHTML = includeAll ? '<option value="">Choose column</option>' : '<option value="">Select a column</option>';
+  headers.forEach((h,i) => {
+    const opt = document.createElement("option");
+    opt.value = i; opt.textContent = h; select.appendChild(opt);
+  });
+}
+function populateControls(headers) {
+  populateSelect("filterColumn",headers);
+  populateSelect("sortColumn",headers);
+  populateSelect("editColumn",headers);
+  populateStatsColumns(headers);
+  populateChartColumns(headers);
+}
+function populateStatsColumns(headers) {
+  const select = $("statsColumn");
+  select.innerHTML = '<option value="">Select a column</option>';
+  headers.forEach((header,index) => {
+    const name = header.trim().toLowerCase();
+    const numericName = /amount|quantity|price|cost|total|value|number|count/.test(name);
+    const hasNumbers = datasetRecords.some(row => isNumericValue(row[index]));
+    if (numericName || hasNumbers) {
+      const option = document.createElement("option");
+      option.value = index; option.textContent = header;
+      select.appendChild(option);
+    }
+  });
+  console.log("T4 numeric columns:", Array.from(select.options).map(o=>o.textContent));
+}
+function populateChartColumns(headers) {
+  const select = $("chartColumn");
+  select.innerHTML = '<option value="">Select a column</option>';
+  headers.forEach((header,index) => {
+    const hasNumbers = datasetRecords.some(row => isNumericValue(row[index]));
+    if (hasNumbers) {
+      const option = document.createElement("option");
+      option.value = index; option.textContent = header;
+      select.appendChild(option);
+    }
+  });
+}
+function renderSummary() {
+  const count = datasetRecords.length, cols = datasetHeaders.length;
+  $("datasetSummary").innerHTML = [
+    ["Records",count],["Columns",cols],["Missing cells",countMissing()],["Change log entries",changeLog.length]
+  ].map(([k,v])=>`<div class="stat"><span class="muted">${k}</span><strong>${v}</strong></div>`).join("");
+  $("columnInfo").innerHTML = `<table><thead><tr><th>Column</th><th>Non-empty values</th><th>Example</th></tr></thead><tbody>${
+    datasetHeaders.map((h,i)=>{
+      const vals=datasetRecords.map(r=>r[i]??"").filter(v=>String(v).trim()!=="");
+      return `<tr><td>${escapeHTML(h)}</td><td>${vals.length}</td><td>${escapeHTML(vals[0]??"")}</td></tr>`;
+    }).join("")
+  }</tbody></table>`;
+}
+function countMissing() {
+  return datasetRecords.reduce((sum,row)=>sum+datasetHeaders.reduce((n,_,i)=>n+(String(row[i]??"").trim()===""?1:0),0),0);
+}
+function renderTable(records=datasetRecords, indices=null) {
+  const display = records.slice(0,250);
+  if (!datasetHeaders.length) { $("recordsTable").innerHTML=""; return; }
+  $("recordsTable").innerHTML = `<table><thead><tr>${datasetHeaders.map(h=>`<th>${escapeHTML(h)}</th>`).join("")}</tr></thead><tbody>${
+    display.map(r=>`<tr>${datasetHeaders.map((_,i)=>`<td>${escapeHTML(r[i]??"")}</td>`).join("")}</tr>`).join("")
+  }</tbody></table>`;
+  $("viewCount").textContent = `Showing ${display.length} of ${records.length} records${records.length>250?" (first 250 shown)":""}.`;
+}
+function loadCSVText(text, filename="CSV file") {
+  const rows=parseCSV(text);
+  if(rows.length<2) { $("uploadStatus").textContent="The CSV file appears to be empty or has no data rows."; return; }
+  const headers=rows[0].map(v=>v.trim().replace(/^\uFEFF/,""));
+  const records=rows.slice(1).map(r=>headers.map((_,i)=>(r[i]??"").trim()));
+  datasetHeaders=headers;
+  datasetRecords=records;
+  originalRecords=records.map(r=>[...r]);
+  changeLog=[]; pendingChange=null;
+  populateControls(headers);
+  renderSummary(); renderTable(); renderChangeLog();
+  $("qualityResults").innerHTML="";
+  $("statsResults").innerHTML="";
+  $("outlierResults").innerHTML="";
+  $("comparisonResults").innerHTML="";
+  $("uploadStatus").textContent=`Loaded ${filename}: ${records.length} records and ${headers.length} columns.`;
+}
+$("csvFile").addEventListener("change", e=>{
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>loadCSVText(String(reader.result),file.name);
+  reader.onerror=()=>{$("uploadStatus").textContent="Could not read this file.";};
+  reader.readAsText(file);
+});
+$("loadSample").addEventListener("click",()=>{
+  const sample=[expectedColumns.join(","),[
+    "TR001","2026-01-10","Agency A","Finance","Purchase","P01","CC01","Equipment","1000","950","USD","Approved","RO01","SITE01","Laptop purchase",""
+  ].join(","),[
+    "TR002","2026-01-11","Agency B","Health","Supply","P02","CC02","Medical","500","500","USD","Pending","RO02","SITE02","Medical supplies",""
+  ].join(",")].join("\n");
+  loadCSVText(sample,"sample data");
+});
+$("applyFilter").addEventListener("click",()=>{
+  if(!datasetRecords.length)return;
+  const q=$("searchText").value.toLowerCase().trim();
+  const fi=$("filterColumn").value, fv=$("filterValue").value.toLowerCase().trim();
+  let rows=datasetRecords.map((r,i)=>({r,i})).filter(x=>{
+    const searchOK=!q||x.r.some(v=>String(v??"").toLowerCase().includes(q));
+    const filterOK=fi===""||!fv||String(x.r[Number(fi)]??"").toLowerCase().includes(fv);
+    return searchOK&&filterOK;
+  });
+  const si=$("sortColumn").value;
+  if(si!=="") {
+    const idx=Number(si), direction=$("sortOrder").value==="asc"?1:-1;
+    rows.sort((a,b)=>{
+      const av=String(a.r[idx]??""),bv=String(b.r[idx]??"");
+      if(isNumericValue(av)&&isNumericValue(bv))return (Number(av)-Number(bv))*direction;
+      return av.localeCompare(bv,undefined,{numeric:true,sensitivity:"base"})*direction;
+    });
+  }
+  renderTable(rows.map(x=>x.r));
+});
+$("resetView").addEventListener("click",()=>{
+  if(!originalRecords.length)return;
+  datasetRecords=originalRecords.map(r=>[...r]);
+  changeLog=[]; pendingChange=null;
+  $("searchText").value=""; $("filterValue").value="";
+  $("filterColumn").value=""; $("sortColumn").value="";
+  $("editPreview").style.display="none";
+  populateStatsColumns(datasetHeaders); populateChartColumns(datasetHeaders);
+  renderSummary(); renderTable(); renderChangeLog();
+  $("qualityResults").innerHTML=""; $("statsResults").innerHTML="";
+  $("outlierResults").innerHTML=""; $("comparisonResults").innerHTML="";
+});
+$("qualityCheck").addEventListener("click",()=>{
+  if(!datasetRecords.length)return;
+  let missing=countMissing(), duplicates=0, invalid=0, ids=new Set(), conflicts=0;
+  const seenRows=new Set(), idIndex=datasetHeaders.findIndex(h=>h.toLowerCase()==="transactionid");
+  datasetRecords.forEach(row=>{
+    const key=JSON.stringify(row);
+    if(seenRows.has(key))duplicates++; else seenRows.add(key);
+    row.forEach((v,i)=>{
+      if(String(v??"").trim()==="")return;
+      const h=datasetHeaders[i].toLowerCase();
+      if((h.includes("amount")||h.includes("quantity")||h.includes("cost")||h.includes("price"))&&!isNumericValue(v))invalid++;
+    });
+    if(idIndex>=0) {
+      const id=String(row[idIndex]??"").trim();
+      if(id){if(ids.has(id))conflicts++;ids.add(id);}
+    }
+  });
+  const items=[["Missing values",missing],["Duplicate rows",duplicates],["Invalid numeric values",invalid],["Conflicting IDs",conflicts]];
+  $("qualityResults").innerHTML=items.map(([k,v])=>`<div class="stat"><span class="muted">${k}</span><strong class="${v?"bad":"good"}">${v}</strong></div>`).join("");
+});
+function makePendingChange() {
+  const rowNumber=Number($("editRecord").value), col=Number($("editColumn").value), value=$("editValue").value;
+  if(!Number.isInteger(rowNumber)||rowNumber<1||rowNumber>datasetRecords.length||$("editColumn").value==="") {
+    $("editPreview").style.display="block"; $("editPreview").textContent="Enter a valid record number and choose a column."; return null;
+  }
+  const oldValue=datasetRecords[rowNumber-1][col]??"";
+  pendingChange={rowNumber,columnIndex:col,oldValue,newValue:value};
+  $("editPreview").style.display="block";
+  $("editPreview").textContent=`Record ${rowNumber} | ${datasetHeaders[col]}: "${oldValue}" → "${value}"`;
+  return pendingChange;
+}
+$("previewEdit").addEventListener("click",makePendingChange);
+$("applyEdit").addEventListener("click",()=>{
+  const change=makePendingChange(); if(!change)return;
+  datasetRecords[change.rowNumber-1][change.columnIndex]=change.newValue;
+  changeLog.push({record:change.rowNumber,column:datasetHeaders[change.columnIndex],oldValue:change.oldValue,newValue:change.newValue,method:"Manual",reason:"Manual correction by analyst"});
+  pendingChange=null;
+  renderSummary(); renderTable(); renderChangeLog();
+  $("editPreview").textContent="Correction applied and recorded in the change log.";
+});
+function renderChangeLog() {
+  if(!changeLog.length){$("changeLogTable").innerHTML='<p class="note" style="padding:10px">No manual corrections recorded.</p>';return;}
+  $("changeLogTable").innerHTML=`<table><thead><tr><th>Record</th><th>Column</th><th>Original value</th><th>New value</th><th>Method</th><th>Reason</th></tr></thead><tbody>${
+    changeLog.map(c=>`<tr><td>${c.record}</td><td>${escapeHTML(c.column)}</td><td>${escapeHTML(c.oldValue)}</td><td>${escapeHTML(c.newValue)}</td><td>${escapeHTML(c.method)}</td><td>${escapeHTML(c.reason)}</td></tr>`).join("")
+  }</tbody></table>`;
+}
+function mean(a){return a.reduce((s,n)=>s+n,0)/a.length}
+function median(a){const s=[...a].sort((x,y)=>x-y),m=Math.floor(s.length/2);return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function mode(a){const counts=new Map();a.forEach(n=>counts.set(n,(counts.get(n)||0)+1));const max=Math.max(...counts.values());const modes=[...counts].filter(x=>x[1]===max).map(x=>x[0]);return max===1?"No repeated value":modes.join(", ")}
+function stats(a){
+  const avg=mean(a), sorted=[...a].sort((x,y)=>x-y);
+  const variance=a.reduce((s,n)=>s+(n-avg)**2,0)/a.length;
+  return {count:a.length,total:a.reduce((s,n)=>s+n,0),mean:avg,median:median(a),mode:mode(a),min:Math.min(...a),max:Math.max(...a),range:Math.max(...a)-Math.min(...a),sd:Math.sqrt(variance),sorted};
+}
+function displayStats(s,container){
+  const vals=[["Count",s.count],["Total",fmt(s.total)],["Mean",fmt(s.mean)],["Median",fmt(s.median)],["Mode",s.mode],["Minimum",fmt(s.min)],["Maximum",fmt(s.max)],["Range",fmt(s.range)],["Population SD",fmt(s.sd)]];
+  $(container).innerHTML=vals.map(([k,v])=>`<div class="stat"><span class="muted">${k}</span><strong>${v}</strong></div>`).join("");
+}
+function fmt(n){return typeof n==="number"?n.toLocaleString(undefined,{maximumFractionDigits:2}):n}
+$("calculateStats").addEventListener("click",()=>{
+  const col=$("statsColumn").value;
+  if(col===""){ $("statsResults").innerHTML='<p class="note">Please select a numeric column.</p>';return; }
+  const a=numericValues(Number(col));
+  if(!a.length){$("statsResults").innerHTML='<p class="note">No numeric values found in this column.</p>';return;}
+  displayStats(stats(a),"statsResults");
+});
+function quartile(sorted,p){
+  const pos=(sorted.length-1)*p, base=Math.floor(pos),rest=pos-base;
+  return sorted[base+1]!==undefined?sorted[base]+rest*(sorted[base+1]-sorted[base]):sorted[base];
+}
+function drawHistogram(values){
+  const canvas=$("chart"),ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;
+  ctx.clearRect(0,0,w,h);ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);
+  if(!values.length)return;
+  const min=Math.min(...values),max=Math.max(...values),bins=10,counts=Array(bins).fill(0);
+  const span=max-min||1;
+  values.forEach(v=>{let b=Math.min(bins-1,Math.floor((v-min)/span*bins));counts[b]++;});
+  const maxCount=Math.max(...counts,1),left=55,right=20,top=25,bottom=45;
+  ctx.strokeStyle="#64748b";ctx.beginPath();ctx.moveTo(left,top);ctx.lineTo(left,h-bottom);ctx.lineTo(w-right,h-bottom);ctx.stroke();
+  const bw=(w-left-right)/bins;
+  counts.forEach((c,i)=>{
+    const bh=(h-top-bottom)*c/maxCount,x=left+i*bw,y=h-bottom-bh;
+    ctx.fillStyle="#3b82f6";ctx.fillRect(x+3,y,bw-6,bh);
+    ctx.fillStyle="#334155";ctx.font="12px Arial";ctx.textAlign="center";ctx.fillText(c,x+bw/2,y-5);
+  });
+  ctx.fillText(fmt(min),left,h-17);ctx.fillText(fmt(max),w-right,h-17);
+  ctx.textAlign="left";ctx.fillText("Frequency",8,15);
+}
+$("drawChart").addEventListener("click",()=>{
+  const col=$("chartColumn").value;
+  if(col==="")return;
+  const a=numericValues(Number(col));
+  drawHistogram(a);
+});
+$("findOutliers").addEventListener("click",()=>{
+  const col=$("chartColumn").value;
+  if(col===""){ $("outlierResults").innerHTML='<p class="note">Select a numeric column first.</p>';return; }
+  const values=numericValues(Number(col));
+  if(values.length<4){$("outlierResults").innerHTML='<p class="note">At least four numeric values are needed for this check.</p>';return;}
+  const sorted=[...values].sort((a,b)=>a-b),q1=quartile(sorted,.25),q3=quartile(sorted,.75),iqr=q3-q1;
+  const lower=q1-1.5*iqr,upper=q3+1.5*iqr,outliers=values.filter(v=>v<lower||v>upper);
+  $("outlierResults").innerHTML=[
+    ["Q1",fmt(q1)],["Q3",fmt(q3)],["IQR",fmt(iqr)],["Lower fence",fmt(lower)],["Upper fence",fmt(upper)],["Outlier count",outliers.length]
+  ].map(([k,v])=>`<div class="stat"><span class="muted">${k}</span><strong>${v}</strong></div>`).join("");
+  const normal=values.filter(v=>v>=lower&&v<=upper);
+  if(normal.length){
+    const a=stats(values),b=stats(normal);
+    $("comparisonResults").innerHTML=`<h3>Statistics comparison</h3><div class="two"><div><strong>With outliers</strong><div class="stats-grid"><div class="stat">Mean<strong>${fmt(a.mean)}</strong></div><div class="stat">Median<strong>${fmt(a.median)}</strong></div><div class="stat">SD<strong>${fmt(a.sd)}</strong></div></div></div><div><strong>Without outliers</strong><div class="stats-grid"><div class="stat">Mean<strong>${fmt(b.mean)}</strong></div><div class="stat">Median<strong>${fmt(b.median)}</strong></div><div class="stat">SD<strong>${fmt(b.sd)}</strong></div></div></div></div><p class="note">Outlier values: ${outliers.length?outliers.map(fmt).join(", "):"None"}</p>`;
+  }
+});
+function toCSV(rows){
+  return "\uFEFF"+rows.map(row=>row.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+}
+function downloadFile(filename,content){
+  const blob=new Blob([content],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+$("downloadClean").addEventListener("click",()=>{
+  if(!datasetHeaders.length)return;
+  downloadFile("Resource_Allocation_Cleaned.csv",toCSV([datasetHeaders,...datasetRecords]));
+});
+$("downloadLog").addEventListener("click",()=>{
+  const headers=["Record","Column","Original Value","New Value","Method","Reason"];
+  const rows=changeLog.map(c=>[c.record,c.column,c.oldValue,c.newValue,c.method,c.reason]);
+  downloadFile("Resource_Allocation_Change_Log.csv",toCSV([headers,...rows]));
+});
+</script>
+</body>
+</html>
